@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref } from "vue";
 import { useEmployeeStore } from "@/stores/employeeStore";
 
 const employee = useEmployeeStore();
 const items = employee.data;
-const dailgo = ref(false);
+const dialogVisible = ref(false);
+const deleteDialogVisible = ref(false);
 const editedIndex = ref(-1);
-const editedItem = ref({
+
+const newEmployee = ref({
   Name: "",
   contacts: "",
   address: "",
@@ -15,40 +17,18 @@ const editedItem = ref({
   id: "",
 });
 
+
 const headers = [
-  { title: "Name", value: "Name", key: "name" },
+  { title: "Name", value: "Name" },
   { title: "Contact", value: "contacts" },
   { title: "Address", value: "address" },
   { title: "Date of Birth", value: "dateOfBirth" },
   { title: "Date of Hire", value: "dateOfHire" },
-
-  { title: "actions", key: "actions" },
+  { title: "Actions", value: "actions" },
 ];
 
-const numper = ref(1);
-
-const dialogVisible = ref(false);
-const deleteDialogVisible = ref(false);
-const newEmployee = ref({
-  Name: "",
-  contacts: "",
-  address: "",
-  dateOfBirth: "",
-  dateOfHire: "",
-  id: numper.value + 1,
-});
 const formatTitle = () => {
-  return editedIndex.value === -1 ? " New Employee" : "New Employee";
-};
-
-// const editedEmployee = (item) => {
-//   editedIndex.value = items.indexOf(item);
-// };
-
-const addNewEmployee = () => {
-  employee.addEmployee(newEmployee.value);
-  resetForm();
-  dialogVisible.value = false;
+  return editedIndex.value === -1 ? "New Employee" : "Edit Employee";
 };
 
 const resetForm = () => {
@@ -58,17 +38,65 @@ const resetForm = () => {
     address: "",
     dateOfBirth: "",
     dateOfHire: "",
+    id: "",
   };
 };
+
+
+
+const editEmployee = (item) => {
+  
+  editedIndex.value = item.id
+  newEmployee.value = { ...item }; 
+  dialogVisible.value = true; 
+};
+
+const addOrEditEmployee = () => {
+
+
+if (editedIndex.value === -1) {
+  newEmployee.value.id = items.length + 1; 
+  employee.addEmployee(newEmployee.value);
+} else {
+  employee.updateEmployee(editedIndex.value,newEmployee.value)
+}
+resetForm();
+dialogVisible.value = false;
+editedIndex.value = -1;
+};
+
+
+
+
+
+const deleteValue=ref<Number>()
+
+
+const confirmDeleteEmployee = (item:Number) => {
+  deleteDialogVisible.value = true;
+  deleteValue.value=item
+
+};
+
+
+const deleteEmployee = () => {
+  console.log(deleteValue.value);
+  employee.delete(deleteValue.value)
+  deleteDialogVisible.value = false;
+  editedIndex.value = -1;
+};
+
+
 </script>
+
 <template>
   <div>
     <VDataTable :items="items" :headers="headers">
       <template v-slot:top>
-        <VToolbarTitle> Employee List </VToolbarTitle>
+        <VToolbarTitle>Employee List</VToolbarTitle>
         <v-divider class="mx-4" inset vertical></v-divider>
         <v-spacer></v-spacer>
-        <VDialog v-model="dailgo" max-width="800px">
+        <VDialog v-model="dialogVisible" max-width="800px">
           <template v-slot:activator="{ props }">
             <v-btn class="mb-2" color="primary" dark v-bind="props">
               New Employee
@@ -76,7 +104,7 @@ const resetForm = () => {
           </template>
           <VCard>
             <VCardTitle class="mt-3">
-              <span class="text-h5">{{ formatTitle() }}}</span>
+              <span class="text-h5">{{ formatTitle() }}</span>
             </VCardTitle>
             <VCardText>
               <VContainer>
@@ -117,36 +145,29 @@ const resetForm = () => {
               </VContainer>
             </VCardText>
             <VCardActions>
-              <VBtn color="primary" @click="addNewEmployee">Save</VBtn>
+              <VBtn color="primary" @click="addOrEditEmployee">Save</VBtn>
             </VCardActions>
           </VCard>
         </VDialog>
 
-        <v-dialog v-model="deleteDialogVisible" max-width="500px">
-          <v-card>
-            <v-card-title class="text-h5">
-              Are you sure you want to delete this item?
-            </v-card-title>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="blue-darken-1">OK</v-btn>
-              <v-btn color="red" @click="deleteDialogVisible = false"
-                >Cancel</v-btn
-              >
-              <v-spacer></v-spacer>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+        <VDialog v-model="deleteDialogVisible" max-width="500px">
+          <VCard>
+            <VCardTitle class="text-h5">
+              Are you sure you want to delete this employee?
+            </VCardTitle>
+            <VCardActions >
+             
+                <VBtn color="blue-darken-1" @click="deleteEmployee">OK</VBtn>
+                <VBtn color="red" @click="deleteDialogVisible = false">Cancel</VBtn>
+              </VCardActions>
 
-        <template>
-          <VIcon icon="mdi-delete" />
-          <VIcon icon="mdi-pencil" />
-        </template>
+          </VCard>
+        </VDialog>
       </template>
 
       <template v-slot:[`item.actions`]="{ item }">
-        <VIcon @click="console.log(item)" icon="mdi-pencil" />
-        <VIcon @click="console.log(item)" icon="mdi-delete" />
+        <VIcon @click="editEmployee(item)" icon="mdi-pencil" />
+        <VIcon @click="confirmDeleteEmployee(item.id)" icon="mdi-delete" />
         <RouterLink :to="{ name: 'InfoPage', params: { id: item.id } }">
           <VIcon icon="mdi-eye" />
         </RouterLink>
